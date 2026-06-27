@@ -80,27 +80,61 @@ class ZplConverterFragment : Fragment() {
                 val isZip = name.endsWith(".zip", ignoreCase = true)
 
                 if (isZip) {
+                    // Processar ZIP - aceitar .zpl, .txt ou qualquer arquivo
                     ctx.contentResolver.openInputStream(uri)?.use { input ->
                         ZipInputStream(input).use { zis ->
                             var entry = zis.nextEntry
                             var count = 0
+                            val foundFiles = mutableListOf<String>()
+                            
                             while (entry != null) {
-                                if (!entry.isDirectory && entry.name.endsWith(".zpl", ignoreCase = true)) {
-                                    val outFile = File(tmpDir, entry.name)
-                                    FileOutputStream(outFile).use { output ->
-                                        zis.copyTo(output)
+                                if (!entry.isDirectory) {
+                                    // Aceitar arquivos .zpl, .txt, ou que pareçam ZPL
+                                    val isZplFile = entry.name.endsWith(".zpl", ignoreCase = true) ||
+                                                    entry.name.endsWith(".txt", ignoreCase = true) ||
+                                                    entry.name.contains("zpl", ignoreCase = true)
+                                    
+                                    if (isZplFile) {
+                                        val outFile = File(tmpDir, entry.name)
+                                        FileOutputStream(outFile).use { output ->
+                                            zis.copyTo(output)
+                                        }
+                                        files += outFile
+                                        foundFiles += entry.name
+                                        count++
                                     }
-                                    files += outFile
-                                    count++
                                 }
                                 entry = zis.nextEntry
                             }
+                            
                             if (count == 0) {
-                                throw Exception("Nenhum arquivo .zpl encontrado no ZIP")
+                                // Se não achou .zpl ou .txt, tentar todos os arquivos
+                                ctx.contentResolver.openInputStream(uri)?.use { input2 ->
+                                    ZipInputStream(input2).use { zis2 ->
+                                        var entry2 = zis2.nextEntry
+                                        while (entry2 != null) {
+                                            if (!entry2.isDirectory && entry2.name.isNotBlank()) {
+                                                val outFile = File(tmpDir, entry2.name)
+                                                FileOutputStream(outFile).use { output ->
+                                                    zis2.copyTo(output)
+                                                }
+                                                files += outFile
+                                                foundFiles += entry2.name
+                                                count++
+                                            }
+                                            entry2 = zis2.nextEntry
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            if (count == 0) {
+                                throw Exception("Nenhum arquivo encontrado no ZIP. Arquivos: ${foundFiles.joinToString()}")
                             }
                         }
                     }
                 } else {
+                    // Processar arquivo individual
                     val outFile = File(tmpDir, name)
                     ctx.contentResolver.openInputStream(uri)?.use { input ->
                         FileOutputStream(outFile).use { output ->
@@ -114,12 +148,13 @@ class ZplConverterFragment : Fragment() {
                     throw Exception("Nenhum arquivo para processar")
                 }
 
+                // Converter para PDF
                 val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
                 val converter = ZplToPdfConverter()
                 
                 files.forEachIndexed { idx, zplFile ->
                     if (zplFile.length() == 0L) {
-                        throw Exception("Arquivo ZPL vazio: ${zplFile.name}")
+                        throw Exception("Arquivo vazio: ${zplFile.name}")
                     }
                     
                     val pdfName = if (files.size > 1) {
@@ -133,6 +168,8 @@ class ZplConverterFragment : Fragment() {
                     
                     if (pdfFile.exists() && pdfFile.length() > 0) {
                         generatedPdfs += pdfFile
+                    } else {
+                        throw Exception("PDF não criado: ${zplFile.name}")
                     }
                 }
 

@@ -1,41 +1,121 @@
 package com.exemplo.declaracao.util
+
 import com.itextpdf.kernel.geom.PageSize
 import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfWriter
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.Paragraph
+import com.itextpdf.layout.properties.TextAlignment
 import java.io.File
+
 class ZplToPdfConverter {
+    // 10x15 cm em pontos (1 cm = 28.35 pt)
     private val PAGE = PageSize(10f * 28.35f, 15f * 28.35f)
+    private val PAGE_WIDTH = PAGE.width
+    private val PAGE_HEIGHT = PAGE.height
+
     fun convert(zplFile: File, pdfFile: File) {
         val text = zplFile.readText()
-        val pdf = PdfDocument(PdfWriter(pdfFile))
+        
+        val writer = PdfWriter(pdfFile)
+        val pdf = PdfDocument(writer)
         pdf.defaultPageSize = PAGE
         val doc = Document(pdf)
-        doc.setMargins(0f, 0f, 0f, 0f)
-        val lines = text.split(Regex("\\^|~")).map { it.trim() }.filter { it.isNotEmpty() }
-        var curX = 0; var curY = 0; var curFont = 10f
-        for (line in lines) {
+        doc.setMargins(5f, 5f, 5f, 5f)
+
+        // Parse ZPL commands
+        val elements = parseZPL(text)
+        
+        // Render elements
+        var currentY = PAGE_HEIGHT - 10f
+        val lineHeight = 12f
+        
+        elements.forEach { element ->
+            if (currentY < 10f) {
+                // Nova página se acabar o espaço
+                doc.add(Paragraph("\n").setFixedPosition(currentY))
+                currentY = PAGE_HEIGHT - 10f
+            }
+            
+            val paragraph = Paragraph(element.text)
+                .setFontSize(element.fontSize)
+                .setTextAlignment(element.alignment)
+                .setFixedPosition(5f, currentY, PAGE_WIDTH - 10f)
+            
+            doc.add(paragraph)
+            currentY -= lineHeight + 2f
+        }
+        
+        doc.close()
+    }
+
+    data class ZplElement(
+        val text: String,
+        val fontSize: Float = 10f,
+        val alignment: TextAlignment = TextAlignment.LEFT
+    )
+
+    private fun parseZPL(zpl: String): List<ZplElement> {
+        val elements = mutableListOf<ZplElement>()
+        val lines = zpl.split("\n", "\r\n", "\r")
+        
+        var currentFontSize = 10f
+        var currentAlignment = TextAlignment.LEFT
+        
+        lines.forEach { line ->
+            val trimmedLine = line.trim()
+            
+            if (trimmedLine.isEmpty()) return@forEach
+            
+            // Processar comandos ZPL
             when {
-                line.startsWith("FO") -> {
-                    val parts = line.removePrefix("FO").split(",").map { it.toIntOrNull() ?: 0 }
-                    curX = parts.getOrElse(0){0}; curY = parts.getOrElse(1){0}
-                }
-                line.startsWith("A0") || line.startsWith("A1") -> {
-                    val parts = line.substring(2).split(",").map { it.trim() }
-                    curFont = parts.getOrNull(1)?.toFloatOrNull() ?: 10f
-                }
-                line.startsWith("FD") -> {
-                    val txt = line.removePrefix("FD").substringBefore("^").trim()
-                    if (txt.isNotEmpty()) {
-                        val xPt = (curX / 800f) * PAGE.width
-                        val yPt = PAGE.height - (curY / 1200f) * PAGE.height - 10f
-                        val p = Paragraph(txt).setFontSize(curFont).setFixedPosition(xPt, yPt, PAGE.width - xPt)
-                        doc.add(p)
+                // Campo de texto ^FD...^FS
+                trimmedLine.contains("^FD") && trimmedLine.contains("^FS") -> {
+                    val text = extractFDContent(trimmedLine)
+                    if (text.isNotEmpty()) {
+                        elements += ZplElement(text, currentFontSize, currentAlignment)
                     }
+                }
+                // Fonte ^A0, ^A1, etc
+                trimmedLine.startsWith("^A") -> {
+                    currentFontSize = extractFontSize(trimmedLine)
+                }
+                // Posição ^FOx,y
+                trimmedLine.startsWith("^FO") -> {
+                    // Podemos usar para ajustar alinhamento
+                }
+                // Texto simples (fallback)
+                trimmedLine.isNotEmpty() && !trimmedLine.startsWith("^") -> {
+                    elements += ZplElement(trimmedLine, currentFontSize, currentAlignment)
                 }
             }
         }
-        doc.close()
+        
+        // Se não encontrou elementos formatados, tenta extrair texto simples
+        if (elements.isEmpty()) {
+            lines.filter { it.trim().isNotEmpty() && !it.trim().startsWith("^") }
+                .forEach { line ->
+                    elements += ZplElement(line.trim(), 8f, TextAlignment.LEFT)
+                }
+        }
+        
+        return elements
+    }
+
+    private fun extractFDContent(line: String): String {
+        val startIndex = line.indexOf("^FD")
+        val endIndex = line.indexOf("^FS")
+        
+        if (startIndex == -1 || endIndex == -1 || endIndex <= startIndex) {
+            return ""
+        }
+        
+        return line.substring(startIndex + 3, endIndex).trim()
+    }
+
+    private fun extractFontSize(line: String): Float {
+        // ^A0,N,20,20 - o terceiro parâmetro é a altura da fonte
+        val parts = line.substringAfter("^A").split(",", ";", " ")
+        return parts.getOrNull(2)?.toFloatOrNull()?.coerceIn(5f, 50f) ?: 10f
     }
 }

@@ -19,86 +19,68 @@ class ZplToPdfConverter {
         val pdf = PdfDocument(writer)
         pdf.defaultPageSize = PAGE
         val doc = Document(pdf)
-        doc.setMargins(5f, 5f, 5f, 5f)
+        doc.setMargins(10f, 10f, 10f, 10f)
 
-        // Parse ZPL commands
-        val elements = parseZPL(text)
+        // Extrair e formatar texto do ZPL
+        val lines = extractTextFromZPL(text)
         
-        // Render elements
-        elements.forEach { element ->
-            val paragraph = Paragraph(element.text)
-                .setFontSize(element.fontSize)
-                .setTextAlignment(element.alignment)
-            
-            doc.add(paragraph)
+        // Adicionar cada linha ao PDF
+        lines.forEach { line ->
+            if (line.isNotBlank()) {
+                val paragraph = Paragraph(line.trim())
+                    .setFontSize(8f)
+                    .setTextAlignment(TextAlignment.LEFT)
+                    .setMarginBottom(2f)
+                doc.add(paragraph)
+            }
         }
         
         doc.close()
     }
 
-    data class ZplElement(
-        val text: String,
-        val fontSize: Float = 10f,
-        val alignment: TextAlignment = TextAlignment.LEFT
-    )
-
-    private fun parseZPL(zpl: String): List<ZplElement> {
-        val elements = mutableListOf<ZplElement>()
-        val lines = zpl.split("\n", "\r\n", "\r")
+    private fun extractTextFromZPL(zpl: String): List<String> {
+        val lines = mutableListOf<String>()
+        val zplText = zpl.replace(Regex("[\\x00-\\x1F]"), "") // Remover caracteres de controle
         
-        var currentFontSize = 10f
-        var currentAlignment = TextAlignment.LEFT
+        // Dividir por comandos ZPL e extrair texto
+        val commands = zplText.split("^", "~")
         
-        lines.forEach { line ->
-            val trimmedLine = line.trim()
-            
-            if (trimmedLine.isEmpty()) return@forEach
-            
-            // Processar comandos ZPL
+        commands.forEach { cmd ->
             when {
-                // Campo de texto ^FD...^FS
-                trimmedLine.contains("^FD") && trimmedLine.contains("^FS") -> {
-                    val text = extractFDContent(trimmedLine)
+                // Comando ^FD (Field Data) - texto principal
+                cmd.startsWith("FD") && cmd.contains("^FS") -> {
+                    val text = cmd.substringAfter("FD").substringBefore("^FS").trim()
                     if (text.isNotEmpty()) {
-                        elements += ZplElement(text, currentFontSize, currentAlignment)
+                        lines += text
                     }
                 }
-                // Fonte ^A0, ^A1, etc
-                trimmedLine.startsWith("^A") -> {
-                    currentFontSize = extractFontSize(trimmedLine)
-                }
-                // Texto simples (fallback)
-                trimmedLine.isNotEmpty() && !trimmedLine.startsWith("^") && !trimmedLine.startsWith("~") -> {
-                    elements += ZplElement(trimmedLine, currentFontSize, currentAlignment)
+                // Texto simples sem comandos
+                cmd.length > 3 && !cmd.startsWith("A") && !cmd.startsWith("FO") && 
+                !cmd.startsWith("BY") && !cmd.startsWith("LH") -> {
+                    val cleanText = cmd.replace(Regex("\\^FS|\\^FD|\\^XF|\\^A.*,"), "")
+                        .replace(Regex("_C[0-9]_[0-9]"), "") // Remover encoding estranho
+                        .trim()
+                    if (cleanText.length > 2) {
+                        lines += cleanText
+                    }
                 }
             }
         }
         
-        // Se não encontrou elementos formatados, tenta extrair texto simples
-        if (elements.isEmpty()) {
-            lines.filter { it.trim().isNotEmpty() && !it.trim().startsWith("^") && !it.trim().startsWith("~") }
-                .forEach { line ->
-                    elements += ZplElement(line.trim(), 8f, TextAlignment.LEFT)
+        // Se não encontrou nada, tentar extrair texto linha por linha
+        if (lines.isEmpty()) {
+            zplText.split("\n", "\r").forEach { line ->
+                val cleanLine = line.trim()
+                    .replace(Regex("\\^[A-Z]{1,2}[0-9,]*"), "")
+                    .replace(Regex("_C[0-9]_[0-9]"), " ")
+                    .replace(Regex("\\^FS|\\^FD"), "")
+                    .trim()
+                if (cleanLine.length > 2 && !cleanLine.startsWith("^")) {
+                    lines += cleanLine
                 }
+            }
         }
         
-        return elements
-    }
-
-    private fun extractFDContent(line: String): String {
-        val startIndex = line.indexOf("^FD")
-        val endIndex = line.indexOf("^FS")
-        
-        if (startIndex == -1 || endIndex == -1 || endIndex <= startIndex) {
-            return ""
-        }
-        
-        return line.substring(startIndex + 3, endIndex).trim()
-    }
-
-    private fun extractFontSize(line: String): Float {
-        // ^A0,N,20,20 - o terceiro parâmetro é a altura da fonte
-        val parts = line.substringAfter("^A").split(",", ";", " ")
-        return parts.getOrNull(2)?.toFloatOrNull()?.coerceIn(5f, 50f) ?: 10f
+        return lines.ifEmpty { listOf(zplText.take(500)) }
     }
 }

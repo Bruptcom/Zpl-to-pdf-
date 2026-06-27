@@ -1,12 +1,10 @@
 package com.exemplo.declaracao.ui
 
 import android.app.Activity
-import android.content.ContentValues
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
+import android.os.Bundle
 import android.os.Environment
-import android.provider.MediaStore
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -66,16 +64,16 @@ class ZplConverterFragment : Fragment() {
 
                 val name = ctx.contentResolver.query(uri, null, null, null, null)?.use {
                     if (it.moveToFirst()) it.getString(it.getColumnIndexOrThrow("_display_name")) else "arquivo"
-                }
+                } ?: "arquivo"
 
                 val files = mutableListOf<File>()
 
-                if (name.endsWith(".zip", true)) {
+                if (name.endsWith(".zip", ignoreCase = true)) {
                     ctx.contentResolver.openInputStream(uri)?.use { input ->
                         ZipInputStream(input).use { zis ->
                             var e = zis.nextEntry
                             while (e != null) {
-                                if (!e.isDirectory && e.name.endsWith(".zpl", true)) {
+                                if (!e.isDirectory && e.name.endsWith(".zpl", ignoreCase = true)) {
                                     val out = File(tmpDir, e.name)
                                     out.outputStream().use { zis.copyTo(it) }
                                     files += out
@@ -131,7 +129,6 @@ class ZplConverterFragment : Fragment() {
         container.removeAllViews()
         
         generatedPdfs.forEach { pdf ->
-            // Card do PDF
             val cardView = com.google.android.material.card.MaterialCardView(requireContext()).apply {
                 layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 setCardBackgroundColor(android.graphics.Color.WHITE)
@@ -166,7 +163,6 @@ class ZplConverterFragment : Fragment() {
             cardView.addView(layout)
             container.addView(cardView)
 
-            // Botões de ação
             val actionsLayout = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.HORIZONTAL
                 layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)

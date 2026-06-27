@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView android:text="REMETENTE" android:textStyle="bold" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etRemNome" android:hint="Nome" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etRemCpf" android:hint="CPF/CNPJ" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etRemTel" android:hint="Telefone" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etRemEmail" android:hint="E-mail" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etRemCep" android:hint="CEP" android:inputType="number" android:maxLength="8" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etRemEnd" android:hint="Endereço" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etRemCidade" android:hint="Cidade/UF" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+
+        <TextView android:text="DESTINATÁRIO" android:textStyle="bold" android:layout_marginTop="16dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etDesNome" android:hint="Nome" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etDesCpf" android:hint="CPF/CNPJ" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etDesCep" android:hint="CEP" android:inputType="number" android:maxLength="8" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etDesEnd" android:hint="Endereço" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etDesCidade" android:hint="Cidade/UF" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+
+        <TextView android:text="CONTEÚDO" android:textStyle="bold" android:layout_marginTop="16dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etDescricao" android:hint="Descrição" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etQtd" android:hint="Quantidade" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etValor" android:hint="Valor (R$)" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etPeso" android:hint="Peso (kg)" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+
+        <Button
+            android:id="@+id/btnGerar"
+            android:text="Gerar PDF"
+            android:layout_marginTop="16dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_marginTop="12dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+</ScrollView>

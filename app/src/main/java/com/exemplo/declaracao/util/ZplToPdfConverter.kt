@@ -13,216 +13,126 @@ class ZplToPdfConverter {
 
     fun convert(zplFile: File, pdfFile: File) {
         val zplContent = zplFile.readText()
+        val decodedText = decodeZPL(zplContent)
         
         val writer = PdfWriter(pdfFile)
         val pdf = PdfDocument(writer)
         pdf.defaultPageSize = PAGE
         val doc = Document(pdf)
-        doc.setMargins(5f, 5f, 5f, 5f)
+        doc.setMargins(8f, 8f, 8f, 8f)
 
-        val labelData = parseZPLLabel(zplContent)
-        renderFormattedLabel(doc, labelData)
+        // Extrair dados do texto decodificado
+        val nf = extract(decodedText, "NF:\\s*([0-9]+)")
+        val shp = extract(decodedText, "SHP:\\s*([0-9]+)")
+        val contrato = extract(decodedText, "Contrato:\\s*([0-9]+)")
+        val peso = extract(decodedText, "PESO:\\s*([0-9]+g?)")
+        val rastreio = extract(decodedText, "(AP[0-9]+BR)")
+        
+        val destinatario = extractSection(decodedText, "DESTINATARIO", "Remetente:")
+        val remetente = extractSection(decodedText, "Remetente:", "DACE")
+        
+        // Renderizar etiqueta
+        var y = PAGE.height - 10f
+        val w = PAGE.width - 16f
+        
+        // Cabeçalho
+        addText(doc, "Mercado Livre", 10f, y, w, TextAlignment.LEFT, true)
+        y -= 12f
+        
+        addText(doc, "NF: $nf", 8f, y, w/2, TextAlignment.LEFT)
+        addText(doc, "Contrato: $contrato", 8f, y, w, TextAlignment.RIGHT)
+        y -= 10f
+        
+        addText(doc, "SHP: $shp", 8f, y, w/2, TextAlignment.LEFT)
+        addText(doc, "PESO: $peso", 8f, y, w, TextAlignment.RIGHT)
+        y -= 12f
+        
+        if (rastreio.isNotEmpty()) {
+            addText(doc, rastreio, 11f, y, w, TextAlignment.CENTER, true)
+            y -= 15f
+        }
+        
+        y -= 10f
+        
+        // Recebedor
+        addText(doc, "Recebedor: _______________________", 8f, y, w, TextAlignment.LEFT)
+        y -= 10f
+        addText(doc, "Assinatura: ____________ Documento: ____________", 7f, y, w, TextAlignment.LEFT)
+        y -= 14f
+        
+        // Destinatário
+        addText(doc, "DESTINATÁRIO", 9f, y, w, TextAlignment.LEFT, true)
+        y -= 11f
+        
+        destinatario.split("\n").forEach { line ->
+            if (line.isNotBlank() && y > 40f) {
+                addText(doc, line.trim(), 7f, y, w, TextAlignment.LEFT)
+                y -= 9f
+            }
+        }
+        
+        y -= 8f
+        
+        // Remetente
+        addText(doc, "Remetente:", 9f, y, w, TextAlignment.LEFT, true)
+        y -= 11f
+        
+        remetente.split("\n").forEach { line ->
+            if (line.isNotBlank() && y > 20f) {
+                addText(doc, line.trim(), 7f, y, w, TextAlignment.LEFT)
+                y -= 9f
+            }
+        }
         
         doc.close()
     }
 
-    data class LabelData(
-        var nf: String = "",
-        var shp: String = "",
-        var contrato: String = "",
-        var peso: String = "",
-        var codigoRastreio: String = "",
-        var destinatarioNome: String = "",
-        var destinatarioEndereco: String = "",
-        var destinatarioCep: String = "",
-        var remetenteNome: String = "",
-        var remetenteEndereco: String = "",
-        var remetenteCep: String = "",
-        var daceText: String = "",
-        var otherText: MutableList<String> = mutableListOf()
-    )
-
-    private fun parseZPLLabel(zpl: String): LabelData {
-        val data = LabelData()
-        
-        // Decodificar texto ZPL (remover encoding estranho)
-        val cleanText = decodeZPLText(zpl)
-        
-        // Extrair campos usando regex
-        data.nf = extractPattern(cleanText, "NF[:\\s]*([0-9]+)")
-        data.shp = extractPattern(cleanText, "SHP[:\\s]*([0-9]+)")
-        data.contrato = extractPattern(cleanText, "Contrato[:\\s]*([0-9]+)")
-        data.peso = extractPattern(cleanText, "PESO[:\\s]*([0-9]+g?)")
-        data.codigoRastreio = extractPattern(cleanText, "(AP[0-9]+BR)")
-        
-        // Extrair destinatário
-        val destMatch = Regex("DESTINATARIO\\s*\\n?\\s*([^\n]+)\\s*\\n?\\s*([^\n]+)\\s*\\n?\\s*([0-9]{5}-?[0-9]{3})", RegexOption.IGNORE_CASE).find(cleanText)
-        if (destMatch != null) {
-            data.destinatarioNome = destMatch.groupValues[1].trim()
-            data.destinatarioEndereco = destMatch.groupValues[2].trim()
-            data.destinatarioCep = destMatch.groupValues[3].trim()
-        }
-        
-        // Extrair remetente
-        val remMatch = Regex("Remetente:\\s*\\n?\\s*([^\n]+)\\s*\\n?\\s*([^\n]+)\\s*\\n?\\s*([0-9]{5}-?[0-9]{3})", RegexOption.IGNORE_CASE).find(cleanText)
-        if (remMatch != null) {
-            data.remetenteNome = remMatch.groupValues[1].trim()
-            data.remetenteEndereco = remMatch.groupValues[2].trim()
-            data.remetenteCep = remMatch.groupValues[3].trim()
-        }
-        
-        // Extrair DACE
-        val daceMatch = Regex("DACE RESUMIDA.*?(?=Chave de Acesso|$)", RegexOption.DOT_MATCHES_ALL).find(cleanText)
-        if (daceMatch != null) {
-            data.daceText = daceMatch.value.trim()
-        }
-        
-        return data
-    }
-
-    private fun decodeZPLText(zpl: String): String {
+    private fun decodeZPL(zpl: String): String {
         return zpl
-            .replace("_C3_A9", "é")
-            .replace("_C3_A3", "ã")
-            .replace("_C3_A7", "ç")
-            .replace("_C3_AD", "í")
-            .replace("_C3_B3", "ó")
-            .replace("_C3_BA", "ú")
-            .replace("_C2_B0", "º")
-            .replace("_C3_87", "Ç")
-            .replace("_C3_89", "É")
-            .replace("_C3_83", "Ã")
-            .replace("_C3_95", "Õ")
-            .replace("_C3_81", "Á")
-            .replace("_C3_8D", "Í")
-            .replace("_C3_93", "Ó")
-            .replace("_C3_9A", "Ú")
-            .replace(Regex("_C[0-9]_[0-9]"), "")
+            .replace("_C3_87", "Ç").replace("_C3_89", "É").replace("_C3_83", "Ã")
+            .replace("_C3_95", "Õ").replace("_C3_81", "Á").replace("_C3_8D", "Í")
+            .replace("_C3_93", "Ó").replace("_C3_9A", "Ú").replace("_C2_B0", "º")
+            .replace("_C3_A9", "é").replace("_C3_A3", "ã").replace("_C3_A7", "ç")
+            .replace("_C3_AD", "í").replace("_C3_B3", "ó").replace("_C3_BA", "ú")
+            .replace("_C2_4", "ç")
+            .replace(Regex("_C[0-9A-F]_[0-9A-F]"), "")
             .replace(Regex("\\^[A-Z]{1,3}[0-9,]*"), " ")
-            .replace(Regex("\\^FS|\\^FD|\\^XF"), " ")
-            .replace(Regex("[\\x00-\\x1F]"), "\n")
+            .replace(Regex("\\^FS|\\^FD"), " ")
+            .replace(Regex("[\\x00-\\x08\\x0E-\\x1F]"), "")
             .replace(Regex("\\|"), "\n")
             .replace(Regex("\\s+"), " ")
             .trim()
     }
 
-    private fun extractPattern(text: String, pattern: String): String {
-        val regex = Regex(pattern, RegexOption.IGNORE_CASE)
-        return regex.find(text)?.groupValues?.getOrNull(1)?.trim() ?: ""
+    private fun extract(text: String, pattern: String): String {
+        return Regex(pattern, RegexOption.IGNORE_CASE).find(text)
+            ?.groupValues?.getOrNull(1)?.trim() ?: ""
     }
 
-    private fun renderFormattedLabel(doc: Document, data: LabelData) {
-        var currentY = PAGE.height - 8f
-        val maxWidth = PAGE.width - 10f
-        val lineHeight = 9f
+    private fun extractSection(text: String, start: String, end: String): String {
+        val startIndex = text.indexOf(start, ignoreCase = true)
+        if (startIndex == -1) return ""
         
-        // Cabeçalho
-        if (data.nf.isNotEmpty()) {
-            addText(doc, "Mercado Livre", 9f, currentY, maxWidth, TextAlignment.LEFT, true)
-            currentY -= lineHeight
-        }
-        
-        addText(doc, "NF: ${data.nf}  SHP: ${data.shp}", 7f, currentY, maxWidth, TextAlignment.LEFT)
-        currentY -= lineHeight
-        
-        addText(doc, "Contrato: ${data.contrato}  PESO: ${data.peso}", 7f, currentY, maxWidth, TextAlignment.LEFT)
-        currentY -= lineHeight
-        
-        if (data.codigoRastreio.isNotEmpty()) {
-            addText(doc, data.codigoRastreio, 9f, currentY, maxWidth, TextAlignment.CENTER, true)
-            currentY -= lineHeight
-        }
-        
-        currentY -= 5f
-        
-        // Recebedor
-        addText(doc, "Recebedor: ___________________________", 7f, currentY, maxWidth, TextAlignment.LEFT)
-        currentY -= lineHeight
-        
-        addText(doc, "Assinatura: ________________  Documento: ________________", 6f, currentY, maxWidth, TextAlignment.LEFT)
-        currentY -= lineHeight * 1.5f
-        
-        // Destinatário
-        addText(doc, "DESTINATÁRIO", 8f, currentY, maxWidth, TextAlignment.LEFT, true)
-        currentY -= lineHeight
-        
-        if (data.destinatarioNome.isNotEmpty()) {
-            addText(doc, data.destinatarioNome, 7f, currentY, maxWidth, TextAlignment.LEFT)
-            currentY -= lineHeight
-        }
-        
-        if (data.destinatarioEndereco.isNotEmpty()) {
-            addText(doc, data.destinatarioEndereco, 6f, currentY, maxWidth, TextAlignment.LEFT)
-            currentY -= lineHeight
-        }
-        
-        if (data.destinatarioCep.isNotEmpty()) {
-            addText(doc, data.destinatarioCep, 7f, currentY, maxWidth, TextAlignment.LEFT)
-            currentY -= lineHeight
-        }
-        
-        currentY -= 5f
-        
-        // Remetente
-        addText(doc, "Remetente:", 8f, currentY, maxWidth, TextAlignment.LEFT, true)
-        currentY -= lineHeight
-        
-        if (data.remetenteNome.isNotEmpty()) {
-            addText(doc, data.remetenteNome, 7f, currentY, maxWidth, TextAlignment.LEFT)
-            currentY -= lineHeight
-        }
-        
-        if (data.remetenteEndereco.isNotEmpty()) {
-            addText(doc, data.remetenteEndereco, 6f, currentY, maxWidth, TextAlignment.LEFT)
-            currentY -= lineHeight
-        }
-        
-        if (data.remetenteCep.isNotEmpty()) {
-            addText(doc, data.remetenteCep, 7f, currentY, maxWidth, TextAlignment.LEFT)
-            currentY -= lineHeight
-        }
-        
-        currentY -= 5f
-        
-        // DACE
-        if (data.daceText.isNotEmpty()) {
-            addText(doc, "DACE RESUMIDA", 7f, currentY, maxWidth, TextAlignment.LEFT, true)
-            currentY -= lineHeight
-            
-            val daceLines = data.daceText.chunked(60)
-            daceLines.take(8).forEach { line ->
-                addText(doc, line, 5f, currentY, maxWidth, TextAlignment.LEFT)
-                currentY -= 7f
-            }
-        }
+        val endIndex = text.indexOf(end, startIndex, ignoreCase = true).takeIf { it != -1 } ?: text.length
+        return text.substring(startIndex + start.length, endIndex)
+            .replace(Regex("\\s+"), " ").trim()
     }
 
     private fun addText(
         doc: Document,
         text: String,
-        fontSize: Float,
+        size: Float,
         y: Float,
         width: Float,
-        alignment: TextAlignment,
+        align: TextAlignment,
         bold: Boolean = false
     ) {
-        if (y < 10f || text.isBlank()) return
+        if (y < 15f || text.isBlank()) return
         
-        try {
-            val paragraph = Paragraph(text)
-                .setFontSize(fontSize)
-                .setTextAlignment(alignment)
-                .setFixedPosition(5f, y, width)
-                .setMarginBottom(0f)
-                .setMarginTop(0f)
-            
-            if (bold) {
-                paragraph.setBold()
-            }
-            
-            doc.add(paragraph)
-        } catch (e: Exception) {
-            // Ignorar erro
-        }
+        val p = Paragraph(text).setFontSize(size).setTextAlignment(align)
+            .setFixedPosition(8f, y, width).setMarginBottom(0f).setMarginTop(0f)
+        if (bold) p.setBold()
+        
+        try { doc.add(p) } catch (e: Exception) {}
     }
 }

@@ -15,21 +15,20 @@ class ZplToPdfConverter {
         val zplContent = zplFile.readText()
         val decoded = decodeZPL(zplContent)
         
-        // Extrair dados
-        val nf = find(decoded, "NF:\\s*([0-9]+)")
-        val shp = find(decoded, "SHP:\\s*([0-9]+)")
-        val contrato = find(decoded, "Contrato:\\s*([0-9]+)")
-        val peso = find(decoded, "PESO:\\s*([0-9]+g?)")
-        val rastreio = find(decoded, "(AP[0-9]+BR)")
+        // Extrair dados de forma mais robusta
+        val nf = extractValue(decoded, "NF:", "SHP:")
+        val shp = extractValue(decoded, "SHP:", "PESO:")
+        val peso = extractValue(decoded, "PESO:", "Contrato:")
+        val contrato = extractValue(decoded, "Contrato:", "\n")
+        val rastreio = extractPattern(decoded, "(AP[0-9]+BR)")
         
-        val destNome = find(decoded, "DESTINATARIO\\s*\\n?\\s*([^\n]+)")
-        val destEnd = find(decoded, "DESTINATARIO[^\n]*\\n[^\n]*\\n?\\s*([^\n]+)")
-        val destCep = find(decoded, "([0-9]{5}-?[0-9]{3}).*?(?=Remetente)", RegexOption.DOT_MATCHES_ALL)
+        val destNome = extractSection(decoded, "DESTINATARIO", "Edificio|Rua|Apt|CEP")
+        val destEnd = extractSection(decoded, "Rua|Jardim|Edificio", "Remetente:").take(80)
+        val destCep = extractPattern(decoded, "([0-9]{5}-[0-9]{3})")
         
-        val remNome = find(decoded, "Remetente:\\s*\\n?\\s*([^\n]+)")
-        val remEnd = find(decoded, "Remetente:[^\n]*\\n[^\n]*\\n?\\s*([^\n]+)")
-        val remCep = find(decoded, "(Remetente[^\n]*\\n[^\n]*\\n[^\\n]*\\n?\\s*([0-9]{5}-?[0-9]{3}))")
-            .let { find(decoded, "([0-9]{5}-?[0-9]{3})", startIndex = decoded.indexOf("Remetente")) }
+        val remNome = extractSection(decoded, "Remetente:", "Estrada|Referencia").take(60)
+        val remEnd = extractSection(decoded, "Estrada|Capoeira", "DACE|23026").take(80)
+        val remCep = extractPattern(decoded, "(23026-220|23026220)")
 
         val writer = PdfWriter(pdfFile)
         val pdf = PdfDocument(writer)
@@ -40,37 +39,31 @@ class ZplToPdfConverter {
         var y = PAGE.height - 10f
         val w = PAGE.width - 16f
         
-        // Mercado Livre
+        // Cabeçalho
         addText(doc, "Mercado Livre", 10f, y, w, TextAlignment.LEFT, true)
         y -= 12f
         
-        // NF e Contrato
         addText(doc, "NF: $nf", 7f, y, w/2, TextAlignment.LEFT)
         addText(doc, "Contrato: $contrato", 7f, y, w, TextAlignment.RIGHT)
         y -= 9f
         
-        // SHP e PESO
         addText(doc, "SHP: $shp", 7f, y, w/2, TextAlignment.LEFT)
         addText(doc, "PESO: $peso", 7f, y, w, TextAlignment.RIGHT)
         y -= 9f
         
-        // PAC
         addText(doc, "PAC", 8f, y, w, TextAlignment.CENTER)
         y -= 11f
         
-        // Rastreio
         if (rastreio.isNotEmpty()) {
             addText(doc, rastreio, 10f, y, w, TextAlignment.CENTER, true)
             y -= 15f
         }
         
-        // Recebedor
         addText(doc, "Recebedor:__________________", 7f, y, w, TextAlignment.LEFT)
         y -= 8f
         addText(doc, "Assinatura:____________  Documento:____________", 6f, y, w, TextAlignment.LEFT)
         y -= 12f
         
-        // DESTINATARIO
         addText(doc, "DESTINATÁRIO", 8f, y, w, TextAlignment.LEFT, true)
         y -= 10f
         
@@ -79,7 +72,7 @@ class ZplToPdfConverter {
             y -= 8f
         }
         
-        if (destEnd.isNotEmpty() && destEnd != destNome) {
+        if (destEnd.isNotEmpty()) {
             addText(doc, destEnd, 6f, y, w, TextAlignment.LEFT)
             y -= 8f
         }
@@ -89,7 +82,6 @@ class ZplToPdfConverter {
             y -= 10f
         }
         
-        // Remetente
         addText(doc, "Remetente:", 8f, y, w, TextAlignment.LEFT, true)
         y -= 10f
         
@@ -98,7 +90,7 @@ class ZplToPdfConverter {
             y -= 8f
         }
         
-        if (remEnd.isNotEmpty() && remEnd != remNome) {
+        if (remEnd.isNotEmpty()) {
             addText(doc, remEnd, 6f, y, w, TextAlignment.LEFT)
             y -= 8f
         }
@@ -108,7 +100,6 @@ class ZplToPdfConverter {
             y -= 10f
         }
         
-        // Número
         if (shp.isNotEmpty()) {
             addText(doc, "*$shp*", 8f, y, w, TextAlignment.CENTER)
         }
@@ -124,20 +115,42 @@ class ZplToPdfConverter {
             .replace("_C3_A9", "é").replace("_C3_A3", "ã").replace("_C3_A7", "ç")
             .replace("_C3_AD", "í").replace("_C3_B3", "ó").replace("_C3_BA", "ú")
             .replace("_C3_94", "Ô").replace("_C3_B4", "ô").replace("_C3_8A", "Ê")
-            .replace("_C3_AA", "ê").replace("_C2_4", "ç")
+            .replace("_C3_AA", "ê").replace("_C3_8F", "Ï").replace("_C3_AF", "ï")
+            .replace("_C2_4", "ç").replace("_C3_8F", "I")
             .replace(Regex("_C[0-9A-F]_[0-9A-F]"), "")
             .replace(Regex("\\^[A-Z]{1,3}[0-9,]*"), "\n")
             .replace(Regex("\\^FS|\\^FD"), "")
             .replace(Regex("\\|"), "\n")
             .replace(Regex("[\\x00-\\x08\\x0E-\\x1F]"), "")
+            .replace(Regex("\\s+"), " ")
             .trim()
     }
 
-    private fun find(text: String, pattern: String, options: RegexOption = RegexOption.IGNORE_CASE, startIndex: Int = 0): String {
-        return try {
-            Regex(pattern, options).find(text.substring(startIndex))
-                ?.groupValues?.getOrNull(1)?.trim()?.take(60) ?: ""
-        } catch (e: Exception) { "" }
+    private fun extractValue(text: String, start: String, end: String): String {
+        val startIndex = text.indexOf(start, ignoreCase = true)
+        if (startIndex == -1) return ""
+        
+        val endIndex = text.indexOf(end, startIndex + start.length, ignoreCase = true)
+            .takeIf { it != -1 && it > startIndex } ?: (startIndex + 20).coerceAtMost(text.length)
+        
+        return text.substring(startIndex + start.length, endIndex)
+            .replace(Regex("[^0-9a-zA-Z-]"), "").trim().take(15)
+    }
+
+    private fun extractSection(text: String, startMarker: String, endMarker: String): String {
+        val startIndex = text.indexOf(startMarker, ignoreCase = true)
+        if (startIndex == -1) return ""
+        
+        val endIndex = Regex(endMarker, RegexOption.IGNORE_CASE).find(text, startIndex + startMarker.length)
+            ?.range?.first ?: (startIndex + 100).coerceAtMost(text.length)
+        
+        return text.substring(startIndex + startMarker.length, endIndex)
+            .replace(Regex("^[,\\s]+"), "").trim()
+    }
+
+    private fun extractPattern(text: String, pattern: String): String {
+        return Regex(pattern, RegexOption.IGNORE_CASE).find(text)
+            ?.groupValues?.getOrNull(1)?.trim()?.take(20) ?: ""
     }
 
     private fun addText(doc: Document, text: String, size: Float, y: Float, width: Float, align: TextAlignment, bold: Boolean = false) {

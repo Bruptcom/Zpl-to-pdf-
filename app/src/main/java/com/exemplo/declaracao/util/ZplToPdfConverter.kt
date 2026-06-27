@@ -11,8 +11,6 @@ import java.io.File
 class ZplToPdfConverter {
     // 10x15 cm em pontos (1 cm = 28.35 pt)
     private val PAGE = PageSize(10f * 28.35f, 15f * 28.35f)
-    private val PAGE_WIDTH = PAGE.width
-    private val PAGE_HEIGHT = PAGE.height
 
     fun convert(zplFile: File, pdfFile: File) {
         val text = zplFile.readText()
@@ -27,23 +25,12 @@ class ZplToPdfConverter {
         val elements = parseZPL(text)
         
         // Render elements
-        var currentY = PAGE_HEIGHT - 10f
-        val lineHeight = 12f
-        
         elements.forEach { element ->
-            if (currentY < 10f) {
-                // Nova página se acabar o espaço
-                doc.add(Paragraph("\n").setFixedPosition(currentY))
-                currentY = PAGE_HEIGHT - 10f
-            }
-            
             val paragraph = Paragraph(element.text)
                 .setFontSize(element.fontSize)
                 .setTextAlignment(element.alignment)
-                .setFixedPosition(5f, currentY, PAGE_WIDTH - 10f)
             
             doc.add(paragraph)
-            currentY -= lineHeight + 2f
         }
         
         doc.close()
@@ -80,12 +67,8 @@ class ZplToPdfConverter {
                 trimmedLine.startsWith("^A") -> {
                     currentFontSize = extractFontSize(trimmedLine)
                 }
-                // Posição ^FOx,y
-                trimmedLine.startsWith("^FO") -> {
-                    // Podemos usar para ajustar alinhamento
-                }
                 // Texto simples (fallback)
-                trimmedLine.isNotEmpty() && !trimmedLine.startsWith("^") -> {
+                trimmedLine.isNotEmpty() && !trimmedLine.startsWith("^") && !trimmedLine.startsWith("~") -> {
                     elements += ZplElement(trimmedLine, currentFontSize, currentAlignment)
                 }
             }
@@ -93,7 +76,7 @@ class ZplToPdfConverter {
         
         // Se não encontrou elementos formatados, tenta extrair texto simples
         if (elements.isEmpty()) {
-            lines.filter { it.trim().isNotEmpty() && !it.trim().startsWith("^") }
+            lines.filter { it.trim().isNotEmpty() && !it.trim().startsWith("^") && !it.trim().startsWith("~") }
                 .forEach { line ->
                     elements += ZplElement(line.trim(), 8f, TextAlignment.LEFT)
                 }

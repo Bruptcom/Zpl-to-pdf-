@@ -5,32 +5,50 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     
-    <!-- Fundo -->
+    <!-- Fundo gradiente simulado -->
     <path
-        android:fillColor="#6366F1"
+        android:fillColor="#4F46E5"
         android:pathData="M0,0h108v108h-108z"/>
     
-    <!-- Ícone de documento/PDF -->
+    <!-- Ícone de etiqueta/thermal (ZPL) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M30,25 L55,25 L70,40 L70,80 L30,80 Z"
+        android:pathData="M28,35 L80,35 L80,73 L28,73 Z"
         android:strokeWidth="2"
+        android:strokeColor="#E0E7FF"/>
+    
+    <!-- Linhas da etiqueta (código de barras simulado) -->
+    <path
+        android:fillColor="#4F46E5"
+        android:pathData="M33,42 L35,42 M37,42 L40,42 M42,42 L43,42 M45,42 L48,42 M50,42 L53,42 M55,42 L58,42"/>
+    
+    <path
+        android:fillColor="#4F46E5"
+        android:pathData="M33,47 L36,47 M38,47 L41,47 M43,47 L47,47 M49,47 L52,47 M54,47 L58,47"/>
+    
+    <!-- Texto simulado na etiqueta -->
+    <path
+        android:fillColor="#6B7280"
+        android:pathData="M33,54 L45,54 M33,57 L42,57"/>
+    
+    <!-- Ícone PDF sobreposto -->
+    <path
+        android:fillColor="#EF4444"
+        android:pathData="M62,58 L78,58 L78,72 L62,72 Z"/>
+    
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M65,62 L65,68 M67,62 L67,68 M69,62 L69,68"
+        android:strokeWidth="1.5"
         android:strokeColor="#FFFFFF"/>
     
-    <!-- Canto dobrado -->
-    <path
-        android:fillColor="#E0E7FF"
-        android:pathData="M55,25 L55,40 L70,40 Z"/>
-    
-    <!-- Linhas do documento -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M38,50 L62,50 M38,58 L62,58 M38,66 L50,66"
-        android:strokeWidth="2"
-        android:strokeColor="#6366F1"/>
-    
-    <!-- Ícone de conversão (seta) -->
+    <!-- Seta de conversão -->
     <path
         android:fillColor="#10B981"
-        android:pathData="M65,60 L75,70 L65,80 L65,75 L55,75 L55,65 L65,65 Z"/>
+        android:pathData="M52,48 L57,53 L52,58 L53,55 L45,55 L45,51 L53,51 Z"/>
+    
+    <!-- Canto superior direito arredondado na etiqueta -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M76,35 L80,35 L80,39 Q80,35 76,35 Z"/>
 </vector>

@@ -9,78 +9,98 @@ import com.itextpdf.layout.properties.TextAlignment
 import java.io.File
 
 class ZplToPdfConverter {
-    // 10x15 cm em pontos (1 cm = 28.35 pt)
+    // 10x15 cm - tamanho padrão de etiqueta
     private val PAGE = PageSize(10f * 28.35f, 15f * 28.35f)
 
     fun convert(zplFile: File, pdfFile: File) {
-        val text = zplFile.readText()
+        val zplContent = zplFile.readText()
         
         val writer = PdfWriter(pdfFile)
         val pdf = PdfDocument(writer)
         pdf.defaultPageSize = PAGE
         val doc = Document(pdf)
-        doc.setMargins(10f, 10f, 10f, 10f)
+        doc.setMargins(5f, 5f, 5f, 5f)
 
-        // Extrair e formatar texto do ZPL
-        val lines = extractTextFromZPL(text)
-        
-        // Adicionar cada linha ao PDF
-        lines.forEach { line ->
-            if (line.isNotBlank()) {
-                val paragraph = Paragraph(line.trim())
-                    .setFontSize(8f)
-                    .setTextAlignment(TextAlignment.LEFT)
-                    .setMarginBottom(2f)
-                doc.add(paragraph)
-            }
+        // Verificar se é ZPL com gráfico GFA (etiqueta de postagem)
+        if (zplContent.contains("^GFA") || zplContent.contains("GFA,")) {
+            renderShippingLabel(doc, zplContent)
+        } else {
+            renderSimpleText(doc, zplContent)
         }
         
         doc.close()
     }
 
+    private fun renderShippingLabel(doc: Document, zpl: String) {
+        // Extrair texto legível do ZPL
+        val lines = extractTextFromZPL(zpl)
+        
+        var currentY = PAGE.height - 10f
+        val lineHeight = 9f
+        val maxWidth = PAGE.width - 10f
+        
+        lines.forEach { line ->
+            if (currentY < 10f) return@forEach // Não criar nova página
+            
+            val paragraph = Paragraph(line.trim())
+                .setFontSize(7f)
+                .setTextAlignment(TextAlignment.LEFT)
+                .setFixedPosition(5f, currentY, maxWidth)
+                .setMarginBottom(0f)
+                .setMarginTop(0f)
+            
+            doc.add(paragraph)
+            currentY -= lineHeight
+        }
+    }
+
     private fun extractTextFromZPL(zpl: String): List<String> {
         val lines = mutableListOf<String>()
-        val zplText = zpl.replace(Regex("[\\x00-\\x1F]"), "") // Remover caracteres de controle
         
-        // Dividir por comandos ZPL e extrair texto
-        val commands = zplText.split("^", "~")
+        // Remover comandos ZPL e extrair texto legível
+        val cleanText = zpl
+            .replace(Regex("\\^[A-Z]{1,3}[0-9,]*"), " ") // Remover comandos ^XX
+            .replace(Regex("\\^[A-Z]{1,3}[0-9]+,[0-9]+"), " ") // Remover comandos ^XX,N,N
+            .replace(Regex("_C[0-9]_[0-9]"), " ") // Remover encoding _C3_87
+            .replace(Regex("\\^FS|\\^FD|\\^XF|\\^A.*,"), " ")
+            .replace(Regex("[\\x00-\\x1F]"), " ") // Remover caracteres de controle
+            .replace(Regex("\\s+"), " ") // Múltiplos espaços
+            .trim()
         
-        commands.forEach { cmd ->
-            when {
-                // Comando ^FD (Field Data) - texto principal
-                cmd.startsWith("FD") && cmd.contains("^FS") -> {
-                    val text = cmd.substringAfter("FD").substringBefore("^FS").trim()
-                    if (text.isNotEmpty()) {
-                        lines += text
-                    }
-                }
-                // Texto simples sem comandos
-                cmd.length > 3 && !cmd.startsWith("A") && !cmd.startsWith("FO") && 
-                !cmd.startsWith("BY") && !cmd.startsWith("LH") -> {
-                    val cleanText = cmd.replace(Regex("\\^FS|\\^FD|\\^XF|\\^A.*,"), "")
-                        .replace(Regex("_C[0-9]_[0-9]"), "") // Remover encoding estranho
-                        .trim()
-                    if (cleanText.length > 2) {
-                        lines += cleanText
-                    }
-                }
-            }
+        // Dividir em linhas de ~80 caracteres
+        cleanText.chunked(70).forEach { chunk ->
+            lines += chunk.trim()
         }
         
-        // Se não encontrou nada, tentar extrair texto linha por linha
+        // Se não extraiu nada, usar texto original limpo
         if (lines.isEmpty()) {
-            zplText.split("\n", "\r").forEach { line ->
-                val cleanLine = line.trim()
-                    .replace(Regex("\\^[A-Z]{1,2}[0-9,]*"), "")
-                    .replace(Regex("_C[0-9]_[0-9]"), " ")
-                    .replace(Regex("\\^FS|\\^FD"), "")
-                    .trim()
-                if (cleanLine.length > 2 && !cleanLine.startsWith("^")) {
-                    lines += cleanLine
-                }
-            }
+            lines += cleanText.take(1000)
         }
         
-        return lines.ifEmpty { listOf(zplText.take(500)) }
+        return lines
+    }
+
+    private fun renderSimpleText(doc: Document, text: String) {
+        val lines = text.split("\n", "\r\n", "\r")
+            .filter { it.isNotBlank() }
+            .map { it.trim() }
+        
+        var currentY = PAGE.height - 10f
+        val lineHeight = 10f
+        val maxWidth = PAGE.width - 10f
+        
+        lines.forEach { line ->
+            if (currentY < 10f) return@forEach
+            
+            val paragraph = Paragraph(line)
+                .setFontSize(8f)
+                .setTextAlignment(TextAlignment.LEFT)
+                .setFixedPosition(5f, currentY, maxWidth)
+                .setMarginBottom(0f)
+                .setMarginTop(0f)
+            
+            doc.add(paragraph)
+            currentY -= lineHeight
+        }
     }
 }

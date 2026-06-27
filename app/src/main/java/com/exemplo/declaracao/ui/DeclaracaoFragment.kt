@@ -1,12 +1,13 @@
 package com.exemplo.declaracao.ui
 
 import android.content.ContentValues
+import android.content.Context
+import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
-import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -14,7 +15,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import com.exemplo.declaracao.databinding.FragmentDeclaracaoBinding
@@ -23,7 +23,6 @@ import com.exemplo.declaracao.util.CepService
 import com.exemplo.declaracao.util.PdfDeclaracaoGenerator
 import kotlinx.coroutines.*
 import java.io.File
-import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -32,14 +31,30 @@ class DeclaracaoFragment : Fragment() {
     private val b get() = _b!!
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val cep = CepService()
+    private lateinit var prefs: SharedPreferences
     private var lastGeneratedPdf: File? = null
+
+    companion object {
+        private const val PREFS_NAME = "declaracao_prefs"
+        private const val KEY_REM_NOME = "rem_nome"
+        private const val KEY_REM_CPF = "rem_cpf"
+        private const val KEY_REM_TEL = "rem_tel"
+        private const val KEY_REM_EMAIL = "rem_email"
+        private const val KEY_REM_END = "rem_end"
+        private const val KEY_REM_NUM = "rem_num"
+        private const val KEY_REM_COMP = "rem_comp"
+        private const val KEY_REM_CIDADE = "rem_cidade"
+    }
 
     override fun onCreateView(i: LayoutInflater, c: ViewGroup?, s: Bundle?): View {
         _b = FragmentDeclaracaoBinding.inflate(i, c, false)
+        prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return b.root
     }
 
     override fun onViewCreated(v: View, s: Bundle?) {
+        loadSavedData()
+        
         watchCep(b.etRemCep) { endereco ->
             b.etRemEnd.setText("${endereco.logradouro}, ${endereco.bairro}".trim(',', ' '))
             b.etRemCidade.setText("${endereco.localidade}/${endereco.uf}")
@@ -49,7 +64,36 @@ class DeclaracaoFragment : Fragment() {
             b.etDesCidade.setText("${endereco.localidade}/${endereco.uf}")
         }
 
-        b.btnGerar.setOnClickListener { gerarPdf() }
+        b.btnGerar.setOnClickListener { 
+            saveData()
+            gerarPdf() 
+        }
+    }
+
+    private fun loadSavedData() {
+        b.etRemNome.setText(prefs.getString(KEY_REM_NOME, ""))
+        b.etRemCpf.setText(prefs.getString(KEY_REM_CPF, ""))
+        b.etRemTel.setText(prefs.getString(KEY_REM_TEL, ""))
+        b.etRemEmail.setText(prefs.getString(KEY_REM_EMAIL, ""))
+        b.etRemEnd.setText(prefs.getString(KEY_REM_END, ""))
+        b.etRemNumero.setText(prefs.getString(KEY_REM_NUM, ""))
+        b.etRemComplemento.setText(prefs.getString(KEY_REM_COMP, ""))
+        b.etRemCidade.setText(prefs.getString(KEY_REM_CIDADE, ""))
+    }
+
+    private fun saveData() {
+        prefs.edit().apply {
+            putString(KEY_REM_NOME, b.etRemNome.text.toString())
+            putString(KEY_REM_CPF, b.etRemCpf.text.toString())
+            putString(KEY_REM_TEL, b.etRemTel.text.toString())
+            putString(KEY_REM_EMAIL, b.etRemEmail.text.toString())
+            putString(KEY_REM_END, b.etRemEnd.text.toString())
+            putString(KEY_REM_NUM, b.etRemNumero.text.toString())
+            putString(KEY_REM_COMP, b.etRemComplemento.text.toString())
+            putString(KEY_REM_CIDADE, b.etRemCidade.text.toString())
+            apply()
+        }
+        Toast.makeText(requireContext(), "Dados do remetente salvos!", Toast.LENGTH_SHORT).show()
     }
 
     private fun watchCep(field: android.widget.EditText, onOk: (CepService.Endereco) -> Unit) {
@@ -105,39 +149,17 @@ class DeclaracaoFragment : Fragment() {
                     val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
                     val fileName = "DACE_${timestamp}.pdf"
                     
-                    // Usar MediaStore para Android 10+
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        val contentValues = ContentValues().apply {
-                            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                            put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
-                            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Declaracoes")
-                        }
-                        
-                        val uri = ctx.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-                        if (uri != null) {
-                            val tempFile = File(ctx.cacheDir, fileName)
-                            PdfDeclaracaoGenerator().gerar(d, tempFile)
-                            ctx.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                                tempFile.inputStream().use { inputStream ->
-                                    inputStream.copyTo(outputStream)
-                                }
-                            }
-                            tempFile
-                        } else {
-                            throw Exception("Não foi possível criar o arquivo")
-                        }
-                    } else {
-                        val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                        val decDir = File(downloadDir, "Declaracoes").apply { mkdirs() }
-                        val file = File(decDir, fileName)
-                        PdfDeclaracaoGenerator().gerar(d, file)
-                        file
-                    }
+                    val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                    val decDir = File(downloadDir, "Declaracoes").apply { mkdirs() }
+                    val file = File(decDir, fileName)
+                    
+                    PdfDeclaracaoGenerator().gerar(d, file)
+                    file
                 }
 
                 lastGeneratedPdf = result
                 b.progress.visibility = View.GONE
-                b.tvStatus.text = "✅ PDF gerado com sucesso!\n📁 Salvo em: Download/Declaracoes/"
+                b.tvStatus.text = "✅ PDF gerado!\n📁 Download/Declaracoes/"
                 
                 showActionButtons(result)
                 

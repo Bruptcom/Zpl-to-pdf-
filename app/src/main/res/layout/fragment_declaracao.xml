@@ -1,47 +1,300 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:fillViewport="true"
+    android:background="@color/background">
 
     <LinearLayout
         android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:padding="16dp">
 
-        <TextView android:text="REMETENTE" android:textStyle="bold" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etRemNome" android:hint="Nome" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etRemCpf" android:hint="CPF/CNPJ" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etRemTel" android:hint="Telefone" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etRemEmail" android:hint="E-mail" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etRemCep" android:hint="CEP" android:inputType="number" android:maxLength="8" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etRemEnd" android:hint="Endereço" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etRemCidade" android:hint="Cidade/UF" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <!-- Card Remetente -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            android:layout_marginBottom="12dp">
 
-        <TextView android:text="DESTINATÁRIO" android:textStyle="bold" android:layout_marginTop="16dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etDesNome" android:hint="Nome" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etDesCpf" android:hint="CPF/CNPJ" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etDesCep" android:hint="CEP" android:inputType="number" android:maxLength="8" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etDesEnd" android:hint="Endereço" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etDesCidade" android:hint="Cidade/UF" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp">
 
-        <TextView android:text="CONTEÚDO" android:textStyle="bold" android:layout_marginTop="16dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etDescricao" android:hint="Descrição" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etQtd" android:hint="Quantidade" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etValor" android:hint="Valor (R$)" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etPeso" android:hint="Peso (kg)" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                <TextView android:text="📮 REMETENTE" android:textStyle="bold" android:textSize="16sp"
+                    android:textColor="@color/primary" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"/>
 
-        <Button
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:hint="Nome" android:layout_marginBottom="8dp">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etRemNome"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:hint="CPF/CNPJ" android:layout_marginBottom="8dp">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etRemCpf"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:hint="Telefone" android:layout_marginBottom="8dp">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etRemTel"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:hint="E-mail" android:layout_marginBottom="8dp">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etRemEmail"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:inputType="textEmailAddress"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:hint="CEP" android:layout_marginBottom="8dp">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etRemCep"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:inputType="number" android:maxLength="8"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:hint="Endereço" android:layout_marginBottom="8dp">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etRemEnd"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <LinearLayout android:orientation="horizontal" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginBottom="8dp">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:hint="Número" android:layout_marginEnd="4dp">
+                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etRemNumero"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:inputType="number"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="2" android:hint="Complemento (Apto, Casa, Bloco)" android:layout_marginStart="4dp">
+                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etRemComplemento"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:hint="Cidade/UF" android:layout_marginBottom="8dp">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etRemCidade"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Card Destinatário -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            android:layout_marginBottom="12dp">
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp">
+
+                <TextView android:text="📬 DESTINATÁRIO" android:textStyle="bold" android:textSize="16sp"
+                    android:textColor="@color/primary" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"/>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:hint="Nome" android:layout_marginBottom="8dp">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etDesNome"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:hint="CPF/CNPJ" android:layout_marginBottom="8dp">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etDesCpf"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:hint="CEP" android:layout_marginBottom="8dp">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etDesCep"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:inputType="number" android:maxLength="8"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:hint="Endereço" android:layout_marginBottom="8dp">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etDesEnd"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <LinearLayout android:orientation="horizontal" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginBottom="8dp">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:hint="Número" android:layout_marginEnd="4dp">
+                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etDesNumero"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:inputType="number"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="2" android:hint="Complemento (Apto, Casa, Bloco)" android:layout_marginStart="4dp">
+                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etDesComplemento"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:hint="Cidade/UF" android:layout_marginBottom="8dp">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etDesCidade"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Card Conteúdo -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            android:layout_marginBottom="12dp">
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp">
+
+                <TextView android:text="📦 CONTEÚDO" android:textStyle="bold" android:textSize="16sp"
+                    android:textColor="@color/primary" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"/>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:hint="Descrição do conteúdo" android:layout_marginBottom="8dp">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etDescricao"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <LinearLayout android:orientation="horizontal" android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:hint="Qtd" android:layout_marginEnd="4dp"
+                        android:layout_marginBottom="8dp">
+                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etQtd"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:inputType="number"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:hint="Valor (R$)" android:layout_marginStart="4dp"
+                        android:layout_marginBottom="8dp">
+                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etValor"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:inputType="numberDecimal"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:hint="Peso (kg)" android:layout_marginBottom="8dp">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etPeso"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"/>
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Botão Gerar -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnGerar"
-            android:text="Gerar PDF"
-            android:layout_marginTop="16dp"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_height="56dp"
+            android:text="📄 Gerar Declaração em PDF"
+            android:textSize="16sp"
+            app:cornerRadius="12dp"
+            android:layout_marginBottom="12dp"/>
 
-        <TextView
-            android:id="@+id/tvStatus"
-            android:layout_marginTop="12dp"
+        <!-- Status -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp">
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp">
+
+                <TextView android:text="📋 Status" android:textStyle="bold" android:textSize="16sp"
+                    android:textColor="@color/primary" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:layout_marginBottom="8dp"/>
+
+                <TextView android:id="@+id/tvStatus" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:text="Preencha os campos e gere a declaração"
+                    android:textSize="14sp" android:textColor="@color/on_surface"
+                    android:padding="12dp" android:background="@drawable/status_background"/>
+
+                <ProgressBar android:id="@+id/progress" android:visibility="gone"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp" android:indeterminateTint="@color/primary"/>
+
+                <LinearLayout android:id="@+id/actionButtonsContainer"
+                    android:orientation="vertical" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="12dp"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
-</ScrollView>
+</androidx.core.widget.NestedScrollView>

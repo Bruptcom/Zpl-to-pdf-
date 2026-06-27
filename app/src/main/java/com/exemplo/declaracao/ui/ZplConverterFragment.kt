@@ -1,28 +1,23 @@
 package com.exemplo.declaracao.ui
 
-import android.Manifest
 import android.app.Activity
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.DocumentsContract
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import com.exemplo.declaracao.databinding.FragmentZplBinding
 import com.exemplo.declaracao.util.ZplToPdfConverter
 import kotlinx.coroutines.*
 import java.io.File
-import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
@@ -40,47 +35,17 @@ class ZplConverterFragment : Fragment() {
         }
     }
 
+    private val createPdfLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+        uri?.let { savePdfToUri(it) }
+    }
+
     override fun onCreateView(i: LayoutInflater, c: ViewGroup?, s: Bundle?): View {
         _b = FragmentZplBinding.inflate(i, c, false)
         return b.root
     }
 
     override fun onViewCreated(v: View, s: Bundle?) {
-        b.btnPick.setOnClickListener { 
-            if (checkStoragePermission()) {
-                selectFile()
-            } else {
-                requestStoragePermission()
-            }
-        }
-    }
-
-    private fun checkStoragePermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Environment.isExternalStorageManager()
-        } else {
-            ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-        }
-    }
-
-    private fun requestStoragePermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            try {
-                val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                intent.addCategory("android.intent.category.DEFAULT")
-                intent.data = Uri.parse("package:${requireContext().packageName}")
-                startActivity(intent)
-            } catch (e: Exception) {
-                val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                startActivity(intent)
-            }
-        } else {
-            ActivityCompat.requestPermissions(
-                requireActivity(),
-                arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE),
-                100
-            )
-        }
+        b.btnPick.setOnClickListener { selectFile() }
     }
 
     private fun selectFile() {
@@ -105,11 +70,8 @@ class ZplConverterFragment : Fragment() {
         scope.launch {
             try {
                 val ctx = requireContext()
-                val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                val zplDir = File(downloadDir, "ZPL_PDFs").apply { 
-                    if (!exists()) mkdirs()
-                }
                 
+                // Criar pasta temporária para processamento
                 val tmpDir = File(ctx.cacheDir, "zpl_tmp").apply { 
                     if (exists()) deleteRecursively()
                     mkdirs() 
@@ -185,7 +147,8 @@ class ZplConverterFragment : Fragment() {
                             "ZPL_${timestamp}.pdf"
                         }
                         
-                        val pdfFile = File(zplDir, pdfName)
+                        // Salvar em cache primeiro
+                        val pdfFile = File(ctx.cacheDir, pdfName)
                         converter.convert(zplFile, pdfFile)
                         
                         if (pdfFile.exists() && pdfFile.length() > 0) {
@@ -201,9 +164,9 @@ class ZplConverterFragment : Fragment() {
                 withContext(Dispatchers.Main) {
                     b.progress.visibility = View.GONE
                     if (generatedPdfs.isNotEmpty()) {
-                        b.tvStatus.text = "✅ ${generatedPdfs.size} PDF(s) gerado(s)!\n📁 Download/ZPL_PDFs/"
+                        b.tvStatus.text = "✅ ${generatedPdfs.size} PDF(s) gerado(s)!\n📁 Toque para salvar/compartilhar"
                         createPdfButtons()
-                        Toast.makeText(ctx, "PDFs salvos em: Download/ZPL_PDFs", Toast.LENGTH_LONG).show()
+                        Toast.makeText(ctx, "Toque nos botões para salvar ou compartilhar", Toast.LENGTH_LONG).show()
                     } else {
                         b.tvStatus.text = "❌ Nenhum PDF gerado"
                         Toast.makeText(ctx, "Nenhum PDF foi gerado", Toast.LENGTH_LONG).show()
@@ -240,44 +203,38 @@ class ZplConverterFragment : Fragment() {
             if (!pdf.exists()) return@forEach
             
             try {
+                // Card do PDF
                 val cardView = com.google.android.material.card.MaterialCardView(requireContext()).apply {
                     layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                     setCardBackgroundColor(android.graphics.Color.WHITE)
                     radius = 12f
                     cardElevation = 2f
                     setContentPadding(16, 16, 16, 16)
-                    setOnClickListener { openPdf(pdf) }
                 }
 
                 val layout = LinearLayout(requireContext()).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = android.view.Gravity.CENTER_VERTICAL
-                }
-
-                val icon = android.widget.TextView(requireContext()).apply {
-                    text = "📄"
-                    textSize = 24f
+                    orientation = LinearLayout.VERTICAL
                 }
 
                 val info = android.widget.TextView(requireContext()).apply {
-                    text = pdf.name
+                    text = "📄 ${pdf.name}\nTamanho: ${(pdf.length() / 1024.0).toInt()} KB"
                     textSize = 14f
                     setTextColor(android.graphics.Color.parseColor("#334155"))
-                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                        marginStart = 12
-                        marginEnd = 8
-                    }
                 }
-
-                layout.addView(icon)
-                layout.addView(info)
-                cardView.addView(layout)
-                container.addView(cardView)
 
                 val actionsLayout = LinearLayout(requireContext()).apply {
                     orientation = LinearLayout.HORIZONTAL
                     layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                    setPadding(0, 8, 0, 0)
+                    setPadding(0, 12, 0, 0)
+                }
+
+                val saveBtn = com.google.android.material.button.MaterialButton(requireContext()).apply {
+                    text = "💾 Salvar"
+                    textSize = 12f
+                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                        marginEnd = 4
+                    }
+                    setOnClickListener { savePdf(pdf) }
                 }
 
                 val shareBtn = com.google.android.material.button.MaterialButton(requireContext()).apply {
@@ -296,9 +253,14 @@ class ZplConverterFragment : Fragment() {
                     setOnClickListener { openPdf(pdf) }
                 }
 
+                actionsLayout.addView(saveBtn)
                 actionsLayout.addView(shareBtn)
                 actionsLayout.addView(openBtn)
-                container.addView(actionsLayout)
+                
+                layout.addView(info)
+                layout.addView(actionsLayout)
+                cardView.addView(layout)
+                container.addView(cardView)
 
                 val separator = View(requireContext()).apply {
                     layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1)
@@ -307,6 +269,45 @@ class ZplConverterFragment : Fragment() {
                 container.addView(separator)
             } catch (e: Exception) {
                 // Ignorar erro ao criar botão
+            }
+        }
+    }
+
+    private fun savePdf(pdf: File) {
+        try {
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            createPdfLauncher.launch("ZPL_${timestamp}.pdf")
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "Erro ao salvar: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun savePdfToUri(uri: Uri) {
+        scope.launch {
+            try {
+                if (generatedPdfs.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(requireContext(), "Nenhum PDF para salvar", Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
+                }
+
+                val ctx = requireContext()
+                val pdf = generatedPdfs[0] // Salvar o primeiro PDF
+                
+                ctx.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    pdf.inputStream().use { inputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(ctx, "PDF salvo com sucesso!", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "Erro ao salvar: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

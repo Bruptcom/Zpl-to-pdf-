@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:id="@+id/nav_zpl" android:title="ZPL → PDF" android:icon="@android:drawable/ic_menu_gallery"/>
-    <item android:id="@+id/nav_dec" android:title="Declaração" android:icon="@android:drawable/ic_menu_edit"/>
+    <item 
+        android:id="@+id/nav_zpl" 
+        android:title="ZPL → PDF"
+        android:icon="@android:drawable/ic_menu_gallery"/>
+    <item 
+        android:id="@+id/nav_dec" 
+        android:title="Declaração"
+        android:icon="@android:drawable/ic_menu_edit"/>
 </menu>

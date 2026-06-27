@@ -3,13 +3,16 @@ package com.exemplo.declaracao.ui
 import android.content.ContentValues
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
+import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
@@ -112,20 +115,18 @@ class DeclaracaoFragment : Fragment() {
                         
                         val uri = ctx.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
                         if (uri != null) {
+                            val tempFile = File(ctx.cacheDir, fileName)
+                            PdfDeclaracaoGenerator().gerar(d, tempFile)
                             ctx.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                                val tempFile = File(ctx.cacheDir, fileName)
-                                PdfDeclaracaoGenerator().gerar(d, tempFile)
                                 tempFile.inputStream().use { inputStream ->
                                     inputStream.copyTo(outputStream)
                                 }
-                                tempFile.delete()
                             }
-                            File(ctx.cacheDir, fileName) // Retorna arquivo temporário para referência
+                            tempFile
                         } else {
                             throw Exception("Não foi possível criar o arquivo")
                         }
                     } else {
-                        // Android 9 e abaixo
                         val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                         val decDir = File(downloadDir, "Declaracoes").apply { mkdirs() }
                         val file = File(decDir, fileName)
